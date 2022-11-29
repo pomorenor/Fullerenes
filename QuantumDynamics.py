@@ -105,7 +105,7 @@ class Particle_in_a_box:
 
 electron_in_a_box = Particle_in_a_box(1,1,4)
 #print(electron_in_a_box.basis_functions())
-inicon = electron_in_a_box.set_initial_conditions([0.7,0.3])
+inicon = electron_in_a_box.set_initial_conditions([0.4,0.6])
 solutions = electron_in_a_box.solve_system(10,0.01 ,electron_in_a_box.system_of_equations,inicon)
 
 time_steps = solutions[0]
@@ -133,6 +133,10 @@ for i in second_solution:
 for i in crossed_solution:
     Mixed_Probability_density.append([2*np.real(i*j*j*k*k) for j,k in zip(first_space_wave_function, second_space_wave_function)])
 
+for i,j,k in zip(Probability_density_1, Probability_density_2, Mixed_Probability_density):
+        PD.append([sum(x) for x in zip(i,j,k)])
+
+
 Expected_pos = expected_values(first_solution, second_solution, crossed_solution,basis_set(np.arange(0,6,0.1),2,L),np.arange(0,6,0.1) )
 
 
@@ -142,26 +146,30 @@ def animate(frame):
 
     plt.cla()
     plt.grid()
-    plt.xlabel("Distancia (u.a.)")
-    plt.ylabel("Densidad de probabilidad")
+    plt.xlabel("$\\frac{x}{L}$")
+    plt.ylabel("$|\Psi(x,t)|^2 $ ")
     plt.xlim(0, 6)
     plt.ylim(0.0,0.4)
 
-    plt.fill(np.arange(0,6,0.1), Probability_density_1[frame])
-    plt.fill(np.arange(0,6,0.1), Probability_density_2[frame])
-    plt.fill(np.arange(0,6,0.1), Mixed_Probability_density[frame])
+    #plt.fill(np.arange(0,6,0.1), Probability_density_1[frame])
+    #plt.fill(np.arange(0,6,0.1), Probability_density_2[frame])
+    #plt.fill(np.arange(0,6,0.1), Mixed_Probability_density[frame])
+
+    plt.fill(np.arange(0,6,0.1), PD[frame], color = 'purple')
 
 
     plt.tight_layout()
 
 movie = anim.FuncAnimation(fig, animate, frames = 999, interval = 25 ,repeat = True)
-movie.save("interference.gif")
+movie.save("Dynamics_Particle_in_a_box.gif")
 #plt.show()
 
 
 plt.figure()
 plt.plot(time_steps, Expected_pos)
 plt.grid()
-plt.xlabel("Time")
-plt.ylabel("Expected_pos")
+plt.xlabel("$t(\propto fs)$")
+plt.ylabel("$\langle x \\rangle$")
+plt.ylim(0,1)
+
 plt.savefig("position_expected_value.png")
