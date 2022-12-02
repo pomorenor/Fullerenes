@@ -3,20 +3,22 @@ import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from scipy.integrate import complex_ode
 from matplotlib import animation as anim
+from numpy import diff
 import imageio
 
 
 
 def basis_set(x,n,l):
     number_sets = [(i+1) for i in range(0,n)]
-    basis_sets = [np.sqrt(1/l)*np.sin((i*np.pi*x)/l) for i in number_sets]
+    basis_sets = [np.sqrt(2/l)*np.sin((i*np.pi*x)/l) for i in number_sets]
     return basis_sets
 
-def expected_values(c_1,c_2, c_mixed,wave_functions, interval):
+def Ex_pos(c_1,c_2, c_mixed,wave_functions, interval):
     first_integrand = []
     second_integrand = []
     interference_integrand = []
     position_expected_value = []
+
 
     for i,j in zip(interval,wave_functions[0]):
         first_integrand.append(j*i*j)
@@ -27,23 +29,13 @@ def expected_values(c_1,c_2, c_mixed,wave_functions, interval):
     for i,j,k in zip(interval, wave_functions[0], wave_functions[1]):
         interference_integrand.append(j*i*k)
 
-    #for i,j,k in zip(c_1,c_2, c_mixed):
-    #    position_expected_value.append([i*np.trapz(l, interval) + j*np.trapz(m,interval) + np.re(k)*np.trapz(n,interval) for l,m,n in zip(first_integrand, second_integrand, interference_integrand)])
+    for i,j,k in zip(c_1,c_2, c_mixed):
+        position_expected_value.append([i*np.trapz(first_integrand, interval)+j*np.trapz(first_integrand, interval)+2*np.real(k*np.trapz(interference_integrand,interval))])
 
-    for i,j,k in zip(c_1,c_2,c_mixed):
-        position_expected_value.append([i*np.trapz(first_integrand, interval)+j*np.trapz(first_integrand, interval)+np.real(k)*np.trapz(interference_integrand,interval)])
+
 
 
     return position_expected_value
-
-## space wavefunction
-
-# Esto lo vemos mañana
-#def sp_wave_function(basis_set, time_coefficients):
-#    Psi = 0
-#    for i,j in zip(basis_set, time_coefficients):
-#        Psi += basis_set[i]*time_coefficients
-#    return Psi
 
 
 class Particle_in_a_box:
@@ -66,7 +58,7 @@ class Particle_in_a_box:
         return hamilton
 
     def system_of_equations(self, t, y):
-        return [-1j*y[0] -1j*y[1], -1j*y[0] -1j*y[1]]
+        return [(-1j/2)*(36/np.pi**2)*y[0] -1j*y[1], -1j*y[0] -(1j/2)*(9/np.pi**2)*y[1]]
 
     def solve_system(self, time_interval, dt, coeff_equations, ini_condi):
         self.time_interval = time_interval
@@ -105,7 +97,7 @@ class Particle_in_a_box:
 
 electron_in_a_box = Particle_in_a_box(1,1,4)
 #print(electron_in_a_box.basis_functions())
-inicon = electron_in_a_box.set_initial_conditions([0.4,0.6])
+inicon = electron_in_a_box.set_initial_conditions([1/np.sqrt(6),np.sqrt(5)/np.sqrt(6)])
 solutions = electron_in_a_box.solve_system(10,0.01 ,electron_in_a_box.system_of_equations,inicon)
 
 time_steps = solutions[0]
@@ -124,6 +116,8 @@ Probability_density_2 = []
 Mixed_Probability_density = []
 PD = []
 
+
+
 for i in first_solution:
     Probability_density_1.append([i*j*j for j in first_space_wave_function ])
 
@@ -134,11 +128,13 @@ for i in crossed_solution:
     Mixed_Probability_density.append([2*np.real(i*j*j*k*k) for j,k in zip(first_space_wave_function, second_space_wave_function)])
 
 for i,j,k in zip(Probability_density_1, Probability_density_2, Mixed_Probability_density):
-        PD.append([sum(x) for x in zip(i,j,k)])
+       PD.append([sum(x) for x in zip(i,j,k)])
 
+normalized_solution1 = [i/np.sqrt(i) for i in first_solution]
+normalized_solution2 = [i/np.sqrt(i) for i in second_solution]
+normalized_crossed_solution = [np.real(i)*np.real(i) for i in crossed_solution]
 
-Expected_pos = expected_values(first_solution, second_solution, crossed_solution,basis_set(np.arange(0,6,0.1),2,L),np.arange(0,6,0.1) )
-
+expected_x = Ex_pos(first_solution, second_solution, crossed_solution,basis_set(np.arange(0,6,0.1),2,L),np.arange(0,6,0.1))
 
 fig, axs = plt.subplots()
 
@@ -149,7 +145,7 @@ def animate(frame):
     plt.xlabel("$\\frac{x}{L}$")
     plt.ylabel("$|\Psi(x,t)|^2 $ ")
     plt.xlim(0, 6)
-    plt.ylim(0.0,0.4)
+    plt.ylim(0.0,1.5)
 
     #plt.fill(np.arange(0,6,0.1), Probability_density_1[frame])
     #plt.fill(np.arange(0,6,0.1), Probability_density_2[frame])
@@ -166,10 +162,27 @@ movie.save("Dynamics_Particle_in_a_box.gif")
 
 
 plt.figure()
-plt.plot(time_steps, Expected_pos)
+plt.plot(time_steps, normalized_solution1, linestyle = 'dashed',label = "$\mathbb{P}_{\psi_1}$")
+plt.plot(time_steps, normalized_solution2, linestyle = 'dashed',label = "$\mathbb{P}_{\psi_2}$")
+plt.plot(time_steps, normalized_crossed_solution,linestyle = 'dashed', label = "$\mathbb{P}_I$" )
+plt.axvline(x = 1.269, linestyle = 'dashed', color = 'black')
+plt.axvline(x = 3.82, linestyle = 'dashed' ,color = 'black')
 plt.grid()
-plt.xlabel("$t(\propto fs)$")
-plt.ylabel("$\langle x \\rangle$")
-plt.ylim(0,1)
+plt.xlabel("$t(u.a)$")
+plt.ylabel("$\mathbb{P}$")
+plt.legend(loc = 'upper left')
 
+
+plt.xlim(0,4)
+plt.tight_layout()
+
+plt.savefig("P_vs_t.png")
+
+
+
+plt.figure()
+plt.plot(time_steps, expected_x, color = 'black')
+plt.grid()
+plt.xlabel("$t(u.a)$")
+plt.ylabel("$\langle x \\rangle_t$")
 plt.savefig("position_expected_value.png")
